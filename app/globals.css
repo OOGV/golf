@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f2efe8;
+  --paper-tint: #ebe6dc;
+  --stage: #e6e1d5;
+  --ink: #1a2620;
+  --moss: #3f5b47;
+  --brick: #a8584b;
+  --hairline: rgba(26, 38, 32, 0.1);
+  --hairline-strong: rgba(26, 38, 32, 0.18);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-tint: var(--paper-tint);
+  --color-stage: var(--stage);
+  --color-ink: var(--ink);
+  --color-moss: var(--moss);
+  --color-brick: var(--brick);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--stage);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+button {
+  font-family: inherit;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
