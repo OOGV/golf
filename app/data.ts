@@ -15,6 +15,16 @@ export type Hole = {
   water?: Array<[number, number, number, number]>;
 };
 
+export type Tee = {
+  id: TeeId;
+  label: string;
+  color: string;
+  total: number;
+  rating: number;
+  slope: number;
+  par: number;
+};
+
 export type Course = {
   id: string;
   name: string;
@@ -22,7 +32,7 @@ export type Course = {
   par: number;
   rating: number;
   slope: number;
-  tees: Array<{ id: TeeId; label: string; color: string; total: number }>;
+  tees: Tee[];
   holes: Hole[];
   comboParts?: [string, string];
 };
@@ -139,9 +149,9 @@ function makeCourse(
     slope,
     holes,
     tees: [
-      { id: "white", label: "White", color: "#F2EFE8", total: totalForTee(holes, "white") },
-      { id: "yellow", label: "Yellow", color: "#C8B86A", total: totalForTee(holes, "yellow") },
-      { id: "red", label: "Red", color: "#A8584B", total: totalForTee(holes, "red") },
+      { id: "white",  label: "White",  color: "#F2EFE8", total: totalForTee(holes, "white"),  rating, slope, par },
+      { id: "yellow", label: "Yellow", color: "#C8B86A", total: totalForTee(holes, "yellow"), rating, slope, par },
+      { id: "red",    label: "Red",    color: "#A8584B", total: totalForTee(holes, "red"),    rating, slope, par },
     ],
   };
 }
@@ -153,9 +163,15 @@ function makeCombo(a: Course, b: Course): Course {
     n: 9 + i + 1,
     strokeIndex: h.strokeIndex + 9,
   }));
-  const tees = a.tees.map((t) => {
+  const tees: Tee[] = a.tees.map((t) => {
     const bt = b.tees.find((x) => x.id === t.id);
-    return { ...t, total: t.total + (bt?.total ?? 0) };
+    return {
+      ...t,
+      total: t.total + (bt?.total ?? 0),
+      rating: Math.round((t.rating + (bt?.rating ?? t.rating)) * 10) / 10,
+      slope: Math.round((t.slope + (bt?.slope ?? t.slope)) / 2),
+      par: t.par + (bt?.par ?? t.par),
+    };
   });
   return {
     id: `${a.id}-${b.id}`,

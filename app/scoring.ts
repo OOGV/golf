@@ -1,4 +1,13 @@
-import type { Course, Hole } from "./data";
+import type { Course, Hole, TeeId } from "./data";
+
+function teeMeta(course: Course, teeId?: TeeId) {
+  const tee = teeId ? course.tees.find((t) => t.id === teeId) : undefined;
+  return {
+    rating: tee?.rating ?? course.rating,
+    slope: tee?.slope ?? course.slope,
+    par: tee?.par ?? course.par,
+  };
+}
 
 // Course handicap per WHS, rounded to nearest integer.
 //   CH = HI × (Slope / 113) + (CR - Par)
@@ -6,11 +15,13 @@ import type { Course, Hole } from "./data";
 export function courseHandicap(
   handicapIndex: number | null,
   course: Course,
+  teeId?: TeeId,
 ): number | null {
   if (handicapIndex == null) return null;
+  const { rating, slope, par } = teeMeta(course, teeId);
   const holes = course.holes.length;
   const hi = holes === 9 ? handicapIndex / 2 : handicapIndex;
-  const raw = hi * (course.slope / 113) + (course.rating - course.par);
+  const raw = hi * (slope / 113) + (rating - par);
   return Math.round(raw);
 }
 
@@ -70,8 +81,9 @@ export function scoreRound(
   course: Course,
   scores: Array<number | undefined>,
   handicapIndex: number | null,
+  teeId?: TeeId,
 ): RoundScoring {
-  const ch = courseHandicap(handicapIndex, course);
+  const ch = courseHandicap(handicapIndex, course, teeId);
   const totalHoles = course.holes.length;
 
   let totalGross = 0;

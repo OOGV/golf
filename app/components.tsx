@@ -641,6 +641,115 @@ export function Sheet({
   );
 }
 
+export function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  destructive = false,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  destructive?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 300,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      <div
+        onClick={onCancel}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(26,38,32,0.45)",
+        }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
+        style={{
+          position: "relative",
+          background: PAPER,
+          borderRadius: 16,
+          padding: "22px 22px 18px",
+          maxWidth: 340,
+          width: "100%",
+          boxShadow: "0 30px 60px rgba(0,0,0,0.25)",
+        }}
+      >
+        <div
+          id="confirm-dialog-title"
+          style={{
+            fontSize: 18,
+            fontWeight: 500,
+            color: INK,
+            letterSpacing: -0.2,
+            marginBottom: 8,
+            fontFamily: 'var(--font-geist-sans), ui-sans-serif',
+          }}
+        >
+          {title}
+        </div>
+        <div
+          style={{
+            fontSize: 14,
+            color: "rgba(26,38,32,0.7)",
+            lineHeight: 1.45,
+            marginBottom: 20,
+          }}
+        >
+          {message}
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <PrimaryButton
+            variant="outline"
+            onClick={onCancel}
+            style={{ flex: 1 }}
+          >
+            {cancelLabel}
+          </PrimaryButton>
+          <button
+            onClick={onConfirm}
+            style={{
+              flex: 1,
+              height: 52,
+              borderRadius: 12,
+              background: destructive ? BRICK : INK,
+              color: PAPER,
+              border: 0,
+              cursor: "pointer",
+              fontSize: 15,
+              fontWeight: 500,
+              letterSpacing: -0.1,
+              fontFamily: 'var(--font-geist-sans), ui-sans-serif',
+            }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PrimaryButton({
   children,
   onClick,

@@ -11,6 +11,21 @@ import {
 import { createClient } from "../supabase/client";
 import { supabaseConfigured } from "../supabase/env";
 
+export type CourseTeeMeta = {
+  rating: number;
+  slope: number;
+  par: number;
+  total: number;
+};
+
+export type CourseHoleMeta = {
+  par: number;
+  strokeIndex: number;
+  white_m: number;
+  yellow_m: number;
+  red_m: number;
+};
+
 type CourseRow = {
   id: string;
   name: string;
@@ -28,6 +43,9 @@ type TeeRow = {
   label: string;
   color: string;
   total: number;
+  rating: number;
+  slope: number;
+  par: number;
 };
 
 type HoleRow = {
@@ -81,6 +99,9 @@ function buildCourse(
         label: t.label,
         color: t.color,
         total: t.total,
+        rating: t.rating ?? c.rating,
+        slope: t.slope ?? c.slope,
+        par: t.par ?? c.par,
       })),
     holes: holes
       .filter((h) => h.course_id === c.id)
@@ -98,7 +119,13 @@ function combineCombo(a: Course, b: Course): Course {
   }));
   const tees = a.tees.map((t) => {
     const bt = b.tees.find((x) => x.id === t.id);
-    return { ...t, total: t.total + (bt?.total ?? 0) };
+    return {
+      ...t,
+      total: t.total + (bt?.total ?? 0),
+      rating: Math.round((t.rating + (bt?.rating ?? t.rating)) * 10) / 10,
+      slope: Math.round((t.slope + (bt?.slope ?? t.slope)) / 2),
+      par: t.par + (bt?.par ?? t.par),
+    };
   });
   return {
     id: `${a.id}-${b.id}`,
@@ -125,7 +152,7 @@ export async function fetchAllCourses(): Promise<Record<string, Course>> {
       .returns<CourseRow[]>(),
     supabase
       .from("course_tees")
-      .select("course_id, tee_id, label, color, total")
+      .select("course_id, tee_id, label, color, total, rating, slope, par")
       .returns<TeeRow[]>(),
     supabase
       .from("course_holes")
@@ -157,4 +184,61 @@ export async function fetchAllCourses(): Promise<Record<string, Course>> {
     }
   }
   return byId;
+}
+
+export async function updateCourseTeeMeta(
+  courseId: string,
+  teeId: TeeId,
+  patch: Partial<CourseTeeMeta>,
+) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("course_tees")
+    .update({
+      rating: patch.rating,
+      slope: patch.slope,
+      par: patch.par,
+      total: patch.total,
+    })
+    .eq("course_id", courseId)
+    .eq("tee_id", teeId);
+  if (error) throw error;
+}
+
+export async function updateCourseHoleMeta(
+  courseId: string,
+  holeNumber: number,
+  patch: Partial<CourseHoleMeta>,
+) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("course_holes")
+    .update({
+      par: patch.par,
+      stroke_index: patch.strokeIndex,
+      white_m: patch.white_m,
+      yellow_m: patch.yellow_m,
+      red_m: patch.red_m,
+    })
+    .eq("course_id", courseId)
+    .eq("hole_number", holeNumber);
+  if (error) throw error;
+}
+
+export async function updateCourseMeta(
+  courseId: string,
+  patch: { par?: number; rating?: number; slope?: number; name?: string; region?: string },
+) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("courses")
+    .update({
+      par: patch.par,
+      rating: patch.rating,
+      slope: patch.slope,
+      name: patch.name,
+      region: patch.region,
+    })
+    .eq("id", courseId);
+  if (error) throw error;
 }

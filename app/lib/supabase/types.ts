@@ -199,6 +199,9 @@ export type Database = {
           label: string;
           color: string;
           total: number;
+          rating: number;
+          slope: number;
+          par: number;
         };
         Insert: {
           course_id: string;
@@ -206,11 +209,17 @@ export type Database = {
           label: string;
           color: string;
           total: number;
+          rating: number;
+          slope: number;
+          par: number;
         };
         Update: {
           label?: string;
           color?: string;
           total?: number;
+          rating?: number;
+          slope?: number;
+          par?: number;
         };
         Relationships: [
           {

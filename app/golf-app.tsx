@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  ConfirmDialog,
   Hairline,
   HoleMap,
   HoleStrip,
@@ -653,9 +654,9 @@ function RoundScreen({
   const pin = greenLatLng(round.courseId, round.currentHole);
   const distToPin = geo.position ? haversine(geo.position, pin) : null;
   const totalHoles = course.holes.length;
-  const ch = computeCourseHandicap(handicap, course);
+  const ch = computeCourseHandicap(handicap, course, round.teeId);
   const strokesHere = computeStrokesReceived(ch, hole.strokeIndex, totalHoles);
-  const scoring = scoreRound(course, round.scores, handicap);
+  const scoring = scoreRound(course, round.scores, handicap, round.teeId);
 
   return (
     <div
@@ -1158,7 +1159,7 @@ function TeeScreen({
                   marginTop: 2,
                 }}
               >
-                {t.total} m · CR {course.rating} · SR {course.slope}
+                {t.total} m · CR {t.rating} · SR {t.slope} · Par {t.par}
               </div>
             </div>
             <svg width="8" height="14" viewBox="0 0 8 14">
@@ -1225,6 +1226,7 @@ function MenuDrawer({
   open,
   onClose,
   onNav,
+  onDiscardRound,
   currentHole,
   totalHoles,
   roundActive,
@@ -1235,6 +1237,7 @@ function MenuDrawer({
   open: boolean;
   onClose: () => void;
   onNav: (s: Screen) => void;
+  onDiscardRound: () => void;
   currentHole: number;
   totalHoles: number;
   roundActive: boolean;
@@ -1294,14 +1297,50 @@ function MenuDrawer({
 
         <div style={{ padding: "20px 0", flex: 1, overflow: "auto" }}>
           {roundActive && (
-            <MenuItem
-              label="Round in progress"
-              badge={`Hole ${currentHole}/${totalHoles}`}
-              onClick={() => onNav("round")}
-              active
-            />
+            <>
+              <MenuItem
+                label="Round in progress"
+                badge={`Hole ${currentHole}/${totalHoles}`}
+                onClick={() => onNav("round")}
+                active
+              />
+              <button
+                onClick={onDiscardRound}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                  padding: "14px 24px",
+                  border: 0,
+                  background: "transparent",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <span style={{ fontSize: 16, color: BRICK, fontWeight: 500 }}>
+                  Discard round
+                </span>
+              </button>
+            </>
           )}
           <MenuItem label="Courses" onClick={() => onNav("course")} />
+          <a
+            href="/courses/edit"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              padding: "14px 24px",
+              color: INK,
+              fontSize: 16,
+              fontWeight: 500,
+              textDecoration: "none",
+            }}
+          >
+            Edit courses
+          </a>
           <a
             href="/account"
             style={{
@@ -1449,6 +1488,13 @@ export default function GolfApp() {
   const [history, setHistory] = useState<RoundSummary[]>([]);
   const [handicap, setHandicap] = useState<number | null>(null);
   const [coursesVersion, setCoursesVersion] = useState(0);
+  const [confirm, setConfirm] = useState<null | {
+    title: string;
+    message: string;
+    confirmLabel: string;
+    destructive?: boolean;
+    onConfirm: () => void;
+  }>(null);
   const geo = useGeolocation();
 
   // Load shared course catalog (public read; falls back to static when unconfigured)
@@ -1691,18 +1737,52 @@ export default function GolfApp() {
   }
 
   function handleCoursePick(id: string) {
-    if (roundActive) {
-      const ok = window.confirm(
-        "Starting a new round will discard the round in progress. Continue?",
-      );
-      if (!ok) return;
-      if (roundDbId) {
+    const proceed = () => {
+      if (roundActive && roundDbId) {
         updateRound(roundDbId, { status: "abandoned" }).catch(console.error);
         setRoundDbId(null);
       }
+      setCourseId(id);
+      goto("tee");
+    };
+    if (roundActive) {
+      setConfirm({
+        title: "Discard round in progress?",
+        message:
+          "Starting a new round will discard the round you have in progress. This cannot be undone.",
+        confirmLabel: "Discard & continue",
+        destructive: true,
+        onConfirm: () => {
+          setConfirm(null);
+          proceed();
+        },
+      });
+      return;
     }
-    setCourseId(id);
-    goto("tee");
+    proceed();
+  }
+
+  function discardRound() {
+    if (!roundActive) return;
+    setConfirm({
+      title: "Discard round?",
+      message:
+        "The round in progress will be discarded. This cannot be undone.",
+      confirmLabel: "Discard",
+      destructive: true,
+      onConfirm: () => {
+        setConfirm(null);
+        if (roundDbId) {
+          updateRound(roundDbId, { status: "abandoned" }).catch(console.error);
+        }
+        setRoundDbId(null);
+        setRoundActive(false);
+        setRound(makeEmptyRound("puisto", "white"));
+        setCourseId(null);
+        setMenuOpen(false);
+        setScreen("course");
+      },
+    });
   }
 
   let body: React.ReactNode;
@@ -1763,6 +1843,7 @@ export default function GolfApp() {
             open={menuOpen}
             onClose={() => setMenuOpen(false)}
             onNav={goto}
+            onDiscardRound={discardRound}
             currentHole={round.currentHole}
             totalHoles={getCourse(round.courseId).holes.length}
             roundActive={roundActive}
@@ -1786,6 +1867,15 @@ export default function GolfApp() {
               onClose={() => setSheetOpen(false)}
             />
           </Sheet>
+          <ConfirmDialog
+            open={confirm != null}
+            title={confirm?.title ?? ""}
+            message={confirm?.message ?? ""}
+            confirmLabel={confirm?.confirmLabel ?? "Confirm"}
+            destructive={confirm?.destructive}
+            onConfirm={() => confirm?.onConfirm()}
+            onCancel={() => setConfirm(null)}
+          />
         </div>
       </div>
       <style jsx>{`
